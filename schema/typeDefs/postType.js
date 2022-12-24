@@ -34,7 +34,8 @@ const typeDefs = gql`
   union Post_Error = User | Error
 
   type Query {
-    getMyApprovedPosts: [Post!]
+    getPostById(id: Int!): Post!
+    getAllMyPosts: [Post!]
     getAllPosts: [Post!]
     getNewPosts: [Post!]
     getMyRevertedPosts: [Post!]
@@ -44,9 +45,11 @@ const typeDefs = gql`
     approvePost(id: Int!): Response
     rejectPost(id: Int!): Response
     returnPost(id: Int!): Response
-    comment(id: Int, text: String!): Response
+    comment(id: Int, text: String!): Comment!
     like(id: Int!): Response
   }
 `;
 
 export default typeDefs;
+
+// createPost(title: String!, catagory: String!, file: Upload!): Post!

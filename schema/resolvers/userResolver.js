@@ -1,13 +1,16 @@
-import { ApolloError } from 'apollo-server-express';
+import ase from 'apollo-server-express';
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import User from '../../models/user.js';
+const { ApolloError, GraphQLUpload } = ase;
+
 const userResolver = {
+  // Upload: GraphQLUpload,
   Query: {
     async getProfile(_, __, { req }) {
-      const user = await User.findOne({ where: { id: req.user.id }, attributes: ['id', 'firstName', 'lastName', 'email', 'createdAt'] });
+      const user = await User.findOne({ where: { id: req.user.id }, attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'profilePic', 'createdAt'] });
       return user;
     },
     logout(_, __, { ___, res }) {
@@ -47,7 +50,7 @@ const userResolver = {
     },
     async login(_, { email, password }, { __, res }) {
       try {
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ where: { email }, attributes: ['id', 'firstName', 'lastName', 'password', 'email', 'role', 'profilePic', 'createdAt'] });
         if (!user) {
           return {
             __typename: 'Error',

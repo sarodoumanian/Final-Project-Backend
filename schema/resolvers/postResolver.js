@@ -7,32 +7,58 @@ import User from '../../models/user.js';
 
 const userResolver = {
   Query: {
-    async getMyApprovedPosts(_, __, { req }) {
-      const posts = await Post.findAll({
-        where: { userId: req.user.id },
-        attributes: ['id', 'title', 'catagory', 'image', 'createdAt'],
-        order: [['createdAt', 'DESC']],
-        include: [
-          { model: User, as: 'owner', attributes: ['firstName', 'lastName'] },
-          { model: Comment, required: false, attributes: ['id', 'text', 'userId', 'postId', 'createdAt'], include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] } },
-          { model: Like, required: false, include: { model: User, attributes: ['firstName', 'lastName'] } }
-        ]
-      });
-      return posts;
+    async getPostById(_, { id }, { req }) {
+      try {
+        const post = await Post.findOne({
+          where: { id },
+          attributes: ['id', 'title', 'catagory', 'image', 'status', 'createdAt'],
+          include: { model: User, as: 'owner', attributes: ['firstName', 'lastName', 'profilePic'] }
+        });
+        return post;
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async getAllMyPosts(_, __, { req }) {
+      try {
+        const posts = await Post.findAll({
+          where: { userId: req.user.id },
+          attributes: ['id', 'title', 'catagory', 'status', 'image', 'createdAt'],
+          order: [
+            ['createdAt', 'DESC'],
+            [Comment, 'createdAt', 'DESC']
+          ],
+          include: [
+            { model: User, as: 'owner', attributes: ['firstName', 'lastName', 'profilePic'] },
+            { model: Comment, required: false, attributes: ['id', 'text', 'userId', 'postId', 'createdAt'], include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] } },
+            { model: Like, required: false, include: { model: User, attributes: ['firstName', 'lastName'] } }
+          ]
+        });
+        return posts;
+      } catch (error) {
+        console.log(error);
+      }
     },
     async getAllPosts() {
       try {
         const posts = await Post.findAll({
           where: { status: 'approved' },
-          attributes: ['id', 'title', 'catagory', 'image', 'createdAt'],
-          order: [['createdAt', 'DESC']],
+          attributes: ['id', 'title', 'catagory', 'image', 'status', 'createdAt'],
+          order: [
+            ['createdAt', 'DESC'],
+            [Comment, 'createdAt', 'DESC']
+          ],
           include: [
-            { model: User, as: 'owner', attributes: ['firstName', 'lastName'] },
-            { model: Comment, required: false, attributes: ['id', 'text', 'userId', 'postId', 'createdAt'], include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] } },
-            { model: Like, required: false, include: { model: User, attributes: ['firstName', 'lastName'] } }
+            { model: User, as: 'owner', attributes: ['firstName', 'lastName', 'profilePic'] },
+            {
+              model: Comment,
+              required: false,
+              attributes: ['id', 'text', 'userId', 'postId', 'createdAt'],
+              include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] }
+            },
+            { model: Like, required: false, include: { model: User, attributes: ['id', 'firstName', 'lastName'] } }
           ]
         });
-        // console.log(posts);
         return posts;
       } catch (error) {
         console.log(error);
@@ -42,7 +68,7 @@ const userResolver = {
       try {
         const posts = await Post.findAll({
           where: { status: 'pending' },
-          attributes: ['id', 'title', 'catagory', 'image', 'createdAt'],
+          attributes: ['id', 'title', 'catagory', 'image', 'status', 'createdAt'],
           order: [['createdAt', 'DESC']],
           include: { model: User, as: 'owner', attributes: ['firstName', 'lastName'] }
         });
@@ -72,6 +98,7 @@ const userResolver = {
       }
     },
     async rejectPost(_, { id }, { req }) {
+      console.log('=====', id);
       try {
         await Post.destroy({ where: { id } });
         return {
@@ -93,23 +120,50 @@ const userResolver = {
     },
     async comment(_, { id, text }, { req }) {
       try {
-        await Comment.create({
+        const newComment = await Comment.create({
           userId: req.user.id,
           postId: id,
           text
         });
-        return {
-          message: 'comment created'
-        };
+        const comment = await Comment.findOne({
+          where: { id: newComment.id },
+          attributes: ['id', 'text', 'userId', 'postId', 'createdAt'],
+          include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] }
+        });
+        // { model: Comment, required: false, attributes: ['id', 'text', 'userId', 'postId', 'createdAt'], include: { model: User, attributes: ['firstName', 'lastName', 'profilePic'] } }
+        console.log(comment);
+        return comment;
       } catch (error) {
         console.log(error);
       }
     },
+    // async comment(_, { id, text }, { req }) {
+    //   try {
+    //     await Comment.create({
+    //       userId: req.user.id,
+    //       postId: id,
+    //       text
+    //     });
+    //     return {
+    //       message: 'comment created'
+    //     };
+    //   } catch (error) {
+    //     console.log(error);
+    //   }
+    // },
     async like(_, { id }, { req }) {
+      let response;
       try {
-        await Like.create({ postId: id, userId: req.user.id });
+        const like = await Like.findOne({ where: { postId: id, userId: req.user.id } });
+        if (like) {
+          await Like.destroy({ where: { postId: id, userId: req.user.id } });
+          response = 'unliked';
+        } else {
+          await Like.create({ postId: id, userId: req.user.id });
+          response = 'liked';
+        }
         return {
-          message: 'liked'
+          message: response
         };
       } catch (error) {
         console.log(error);

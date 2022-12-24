@@ -1,11 +1,14 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { ApolloServer } from 'apollo-server-express';
+// const { GraphQLUpload } = require('apollo-server');
+// import { GraphQLUpload } from 'apollo-server-express'
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import { applyMiddleware } from 'graphql-middleware';
 import merge from 'lodash.merge';
+import multer from 'multer';
 
 import auth from './middleware/auth.js';
 import permissions from './middleware/permissions.js';
@@ -17,6 +20,30 @@ dotenv.config();
 
 const app = express();
 app.use(cookieParser());
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, next) => {
+      next(null, 'public/posts/');
+    },
+
+    filename: (req, file, next) => {
+      const random = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
+      next(null, 'Post-' + random + '-' + file.originalname);
+    }
+  }),
+  fileFilter: (req, file, next) => {
+    if (!file) {
+      next();
+    }
+    const image = file.mimetype.startsWith('image/');
+    if (image) {
+      next(null, true);
+    } else {
+      return next();
+    }
+  }
+});
 
 app.use(
   cors({
@@ -48,6 +75,7 @@ const server = new ApolloServer({
 });
 
 app.use(routes);
+app.use('/graphql', upload.single('file'));
 
 server.start().then(() => {
   server.applyMiddleware({

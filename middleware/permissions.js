@@ -22,7 +22,7 @@ const permissions = shield({
     getAllUsers: isAdmin,
     getUserById: isAdmin,
     logout: isLoggedin,
-    getMyApprovedPosts: isLoggedin,
+    getAllMyPosts: isLoggedin,
     getAllPosts: isLoggedin,
     getNewPosts: isAdmin,
     getMyRevertedPosts: isLoggedin
